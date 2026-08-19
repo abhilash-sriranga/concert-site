@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TicketWave — Live Music Tickets</title>
+  <link rel="stylesheet" href="/css/style.css" />
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <a href="/" class="logo">Ticket<span>Wave</span></a>
+    <nav>
+      <a href="/" class="active">Events</a>
+      <a href="/cart.html">My Cart</a>
+    </nav>
+    <a href="/cart.html" class="cart-btn" id="cart-btn">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/>
+        <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/>
+      </svg>
+      Cart
+      <span class="cart-count hidden" id="cart-count">0</span>
+    </a>
+  </div>
+</header>
+
+<div class="hero">
+  <h1>Find Your Next <em>Live Experience</em></h1>
+  <p>Browse upcoming concerts and get your tickets before they sell out.</p>
+</div>
+
+<main>
+  <div class="section-header">
+    <h2>Upcoming Events</h2>
+    <span class="badge" id="event-count">Loading…</span>
+  </div>
+
+  <div class="concerts-grid" id="concerts-grid">
+    <div class="loading">
+      <div class="spinner"></div>
+      <p>Loading events…</p>
+    </div>
+  </div>
+</main>
+
+<div class="toast-container" id="toasts"></div>
+
+<script src="/js/common.js"></script>
+<script>
+  async function loadConcerts() {
+    const grid = document.getElementById('concerts-grid');
+    const countEl = document.getElementById('event-count');
+
+    try {
+      const res = await fetch('/api/concerts');
+      const concerts = await res.json();
+
+      countEl.textContent = `${concerts.length} events`;
+      grid.innerHTML = '';
+
+      concerts.forEach(c => {
+        const card = document.createElement('div');
+        card.className = 'concert-card';
+        card.onclick = () => window.location.href = `/event.html?id=${c.id}`;
+
+        const dateStr = formatDate(c.event_date);
+
+        card.innerHTML = `
+          <img
+            src="https://picsum.photos/seed/${c.image_seed}/600/338"
+            alt="${escHtml(c.artist)} at ${escHtml(c.venue)}"
+            loading="lazy"
+          />
+          <div class="card-body">
+            <div class="card-meta">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+              </svg>
+              ${escHtml(dateStr)}
+            </div>
+            <div class="card-artist">${escHtml(c.artist)}</div>
+            <div class="card-venue">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+              </svg>
+              ${escHtml(c.venue)}
+            </div>
+            <div class="card-footer">
+              <div class="price">$${Number(c.price).toFixed(2)} <span>/ ticket</span></div>
+              <button class="btn-view">View Details</button>
+            </div>
+          </div>
+        `;
+        grid.appendChild(card);
+      });
+    } catch (err) {
+      grid.innerHTML = '<p style="color:var(--danger);padding:40px;text-align:center">Failed to load events. Please refresh.</p>';
+      countEl.textContent = 'Error';
+    }
+  }
+
+  loadConcerts();
+  loadCartCount();
+</script>
+</body>
+</html>
