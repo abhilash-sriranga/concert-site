@@ -70,7 +70,8 @@ app.post('/api/cart', (req, res) => {
     DO UPDATE SET quantity = quantity + excluded.quantity
   `, [sessionId, concert_id, quantity]);
 
-  const rows = all('SELECT id FROM cart_items WHERE session_id = ?', [sessionId]);
+  const rows = all('SELECT id, concert_id, quantity FROM cart_items WHERE session_id = ?', [sessionId]);
+  console.log('[cart] session:', sessionId.slice(0, 8), '| rows in db:', JSON.stringify(rows), '| cart_count:', rows.length);
   res.json({ success: true, cart_count: rows.length });
 });
 
