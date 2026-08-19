@@ -50,8 +50,8 @@ app.get('/api/cart', (req, res) => {
 
 app.get('/api/cart/count', (req, res) => {
   const sessionId = getOrCreateSessionId(req, res);
-  const row = get('SELECT COUNT(*) as total FROM cart_items WHERE session_id = ?', [sessionId]);
-  res.json({ count: row && row.total ? Number(row.total) : 0 });
+  const rows = all('SELECT id FROM cart_items WHERE session_id = ?', [sessionId]);
+  res.json({ count: rows.length });
 });
 
 app.post('/api/cart', (req, res) => {
@@ -70,16 +70,16 @@ app.post('/api/cart', (req, res) => {
     DO UPDATE SET quantity = quantity + excluded.quantity
   `, [sessionId, concert_id, quantity]);
 
-  const row = get('SELECT COUNT(*) as total FROM cart_items WHERE session_id = ?', [sessionId]);
-  res.json({ success: true, cart_count: row && row.total ? Number(row.total) : 0 });
+  const rows = all('SELECT id FROM cart_items WHERE session_id = ?', [sessionId]);
+  res.json({ success: true, cart_count: rows.length });
 });
 
 app.delete('/api/cart/:concertId', (req, res) => {
   const sessionId = getOrCreateSessionId(req, res);
   run('DELETE FROM cart_items WHERE session_id = ? AND concert_id = ?', [sessionId, req.params.concertId]);
 
-  const row = get('SELECT COUNT(*) as total FROM cart_items WHERE session_id = ?', [sessionId]);
-  res.json({ success: true, cart_count: row && row.total ? Number(row.total) : 0 });
+  const rows = all('SELECT id FROM cart_items WHERE session_id = ?', [sessionId]);
+  res.json({ success: true, cart_count: rows.length });
 });
 
 (async () => {
