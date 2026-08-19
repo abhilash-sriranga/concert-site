@@ -52,11 +52,11 @@
       const res = await fetch('/api/cart');
       const items = await res.json();
 
-      const totalQty = items.reduce((s, i) => s + i.quantity, 0);
+      const lineItems = items.length;
       const totalPrice = items.reduce((s, i) => s + i.quantity * i.price, 0);
 
-      badge.textContent = `${totalQty} item${totalQty !== 1 ? 's' : ''}`;
-      updateCartCount(totalQty);
+      badge.textContent = `${lineItems} item${lineItems !== 1 ? 's' : ''}`;
+      updateCartCount(lineItems);
 
       if (items.length === 0) {
         content.innerHTML = `
