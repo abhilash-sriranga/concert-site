@@ -176,7 +176,7 @@
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed');
 
-      updateCartCount(data.cart_count);
+      updateCartCount(data.cart_count, true);
       showToast(`${quantity} ticket${quantity > 1 ? 's' : ''} added to cart!`, 'success');
 
       btn.classList.add('success');

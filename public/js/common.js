@@ -17,7 +17,7 @@ function formatDayOfWeek(dateStr) {
   return d.toLocaleDateString('en-US', { weekday: 'long' });
 }
 
-function updateCartCount(count) {
+function updateCartCount(count, animate = false) {
   const el = document.getElementById('cart-count');
   if (!el) return;
   if (count > 0) {
@@ -25,6 +25,15 @@ function updateCartCount(count) {
     el.classList.remove('hidden');
   } else {
     el.classList.add('hidden');
+  }
+
+  if (animate) {
+    const btn = document.getElementById('cart-btn');
+    if (!btn) return;
+    btn.classList.remove('cart-animate');
+    void btn.offsetWidth; // force reflow so re-adding the class restarts the animation
+    btn.classList.add('cart-animate');
+    btn.addEventListener('animationend', () => btn.classList.remove('cart-animate'), { once: true });
   }
 }
 
