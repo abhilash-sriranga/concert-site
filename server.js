@@ -2,7 +2,7 @@ const express = require('express');
 const cookieParser = require('cookie-parser');
 const crypto = require('crypto');
 const path = require('path');
-const db = require('./database');
+const { init, all, get, run } = require('./database');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -25,27 +25,33 @@ function getOrCreateSessionId(req, res) {
 }
 
 app.get('/api/concerts', (req, res) => {
-  const concerts = db.prepare('SELECT * FROM concerts ORDER BY event_date ASC').all();
+  const concerts = all('SELECT * FROM concerts ORDER BY event_date ASC');
   res.json(concerts);
 });
 
 app.get('/api/concerts/:id', (req, res) => {
-  const concert = db.prepare('SELECT * FROM concerts WHERE id = ?').get(req.params.id);
+  const concert = get('SELECT * FROM concerts WHERE id = ?', [req.params.id]);
   if (!concert) return res.status(404).json({ error: 'Concert not found' });
   res.json(concert);
 });
 
 app.get('/api/cart', (req, res) => {
   const sessionId = getOrCreateSessionId(req, res);
-  const items = db.prepare(`
+  const items = all(`
     SELECT ci.id as cart_item_id, ci.quantity, ci.concert_id,
            c.artist, c.venue, c.event_date, c.price, c.image_seed
     FROM cart_items ci
     JOIN concerts c ON ci.concert_id = c.id
     WHERE ci.session_id = ?
     ORDER BY ci.added_at ASC
-  `).all(sessionId);
+  `, [sessionId]);
   res.json(items);
+});
+
+app.get('/api/cart/count', (req, res) => {
+  const sessionId = getOrCreateSessionId(req, res);
+  const row = get('SELECT SUM(quantity) as total FROM cart_items WHERE session_id = ?', [sessionId]);
+  res.json({ count: row && row.total ? Number(row.total) : 0 });
 });
 
 app.post('/api/cart', (req, res) => {
@@ -54,44 +60,31 @@ app.post('/api/cart', (req, res) => {
 
   if (!concert_id) return res.status(400).json({ error: 'concert_id required' });
 
-  const concert = db.prepare('SELECT id FROM concerts WHERE id = ?').get(concert_id);
+  const concert = get('SELECT id FROM concerts WHERE id = ?', [concert_id]);
   if (!concert) return res.status(404).json({ error: 'Concert not found' });
 
-  db.prepare(`
+  run(`
     INSERT INTO cart_items (session_id, concert_id, quantity)
     VALUES (?, ?, ?)
     ON CONFLICT(session_id, concert_id)
     DO UPDATE SET quantity = quantity + excluded.quantity
-  `).run(sessionId, concert_id, quantity);
+  `, [sessionId, concert_id, quantity]);
 
-  const count = db.prepare(
-    'SELECT SUM(quantity) as total FROM cart_items WHERE session_id = ?'
-  ).get(sessionId);
-
-  res.json({ success: true, cart_count: count.total || 0 });
+  const row = get('SELECT SUM(quantity) as total FROM cart_items WHERE session_id = ?', [sessionId]);
+  res.json({ success: true, cart_count: row && row.total ? Number(row.total) : 0 });
 });
 
 app.delete('/api/cart/:concertId', (req, res) => {
   const sessionId = getOrCreateSessionId(req, res);
-  db.prepare(
-    'DELETE FROM cart_items WHERE session_id = ? AND concert_id = ?'
-  ).run(sessionId, req.params.concertId);
+  run('DELETE FROM cart_items WHERE session_id = ? AND concert_id = ?', [sessionId, req.params.concertId]);
 
-  const count = db.prepare(
-    'SELECT SUM(quantity) as total FROM cart_items WHERE session_id = ?'
-  ).get(sessionId);
-
-  res.json({ success: true, cart_count: count.total || 0 });
+  const row = get('SELECT SUM(quantity) as total FROM cart_items WHERE session_id = ?', [sessionId]);
+  res.json({ success: true, cart_count: row && row.total ? Number(row.total) : 0 });
 });
 
-app.get('/api/cart/count', (req, res) => {
-  const sessionId = getOrCreateSessionId(req, res);
-  const count = db.prepare(
-    'SELECT SUM(quantity) as total FROM cart_items WHERE session_id = ?'
-  ).get(sessionId);
-  res.json({ count: count.total || 0 });
-});
-
-app.listen(PORT, () => {
-  console.log(`Concert site running at http://localhost:${PORT}`);
-});
+(async () => {
+  await init();
+  app.listen(PORT, () => {
+    console.log(`Concert site running at http://localhost:${PORT}`);
+  });
+})();
